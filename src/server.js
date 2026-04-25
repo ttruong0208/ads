@@ -700,21 +700,7 @@ async function exchangeLongLivedUserToken(shortLivedUserToken) {
   return data;
 }
 
-async function getFacebookMe(userToken) {
-  const url =
-    `https://graph.facebook.com/v23.0/me` +
-    `?fields=id,name` +
-    `&access_token=${encodeURIComponent(userToken)}`;
 
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (!res.ok || data.error) {
-    throw new Error(data?.error?.message || 'Không lấy được thông tin tài khoản Facebook');
-  }
-
-  return data;
-}
 
 app.get('/auth/facebook/start', (_req, res) => {
   if (!FB_APP_ID) {
