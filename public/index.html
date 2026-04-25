@@ -134,6 +134,7 @@
         color: var(--text);
         outline: none;
       }
+      
 
       input:focus,
       select:focus,
@@ -273,12 +274,19 @@
           <h3>Bot Ads Manager</h3>
           <div class="sub">Tạo campaign, ad set, chọn post và publish theo full flow.</div>
         </div>
-
         <div class="card">
-          <div class="auth-box">
+          <div class="auth-box auth-box-has-avatar">
+            <div class="fb-avatar-wrap" id="fbAvatarWrap" style="display:none;">
+              <img id="fbAvatar" class="fb-avatar" src="" alt="Facebook Avatar" />
+            </div>
+        
             <div class="auth-title">Kết nối Facebook</div>
             <div id="authStatus" class="auth-status">Đang kiểm tra trạng thái kết nối...</div>
-            <button id="loginFacebookBtn" type="button" class="secondary">Đăng nhập Facebook</button>
+            <div id="fbIdentity" class="hint" style="display:none;"></div>
+        
+            <button id="loginFacebookBtn" type="button" class="secondary">
+              Đăng nhập Facebook
+            </button>
           </div>
         </div>
 

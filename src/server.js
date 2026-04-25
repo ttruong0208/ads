@@ -699,6 +699,23 @@ async function exchangeLongLivedUserToken(shortLivedUserToken) {
 
   return data;
 }
+
+async function getFacebookMe(userToken) {
+  const url =
+    `https://graph.facebook.com/v23.0/me` +
+    `?fields=id,name` +
+    `&access_token=${encodeURIComponent(userToken)}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!res.ok || data.error) {
+    throw new Error(data?.error?.message || 'Không lấy được thông tin tài khoản Facebook');
+  }
+
+  return data;
+}
+
 app.get('/auth/facebook/start', (_req, res) => {
   if (!FB_APP_ID) {
     return res.status(400).send('Missing META_APP_ID');
@@ -731,12 +748,16 @@ app.get('/auth/facebook/callback', async (req, res) => {
     const shortToken = await exchangeCodeForUserToken(code);
     const longToken = await exchangeLongLivedUserToken(shortToken.access_token);
 
+    const me = await getFacebookMe(longToken.access_token);
+
     saveUserToken({
       userToken: longToken.access_token,
       tokenType: 'user',
       expiresIn: longToken.expires_in || null,
       meta: {
-        source: 'oauth_callback'
+        source: 'oauth_callback',
+        facebookUserId: me.id || null,
+        facebookUserName: me.name || null
       }
     });
 
@@ -897,12 +918,20 @@ app.get('/auth/facebook/callback', async (req, res) => {
 
 app.get('/auth/status', (_req, res) => {
   const store = readTokenStore();
+
   res.json({
     ok: true,
     hasToken: !!store?.userToken,
+    connected: !!store?.userToken,
     tokenType: store?.tokenType || null,
     expiresAt: store?.expiresAt || null,
     updatedAt: store?.updatedAt || null,
+    profile: store?.userToken
+      ? {
+          id: store?.meta?.facebookUserId || null,
+          name: store?.meta?.facebookUserName || null
+        }
+      : null,
     meta: store?.meta || {}
   });
 });
