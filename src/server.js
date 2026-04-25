@@ -739,15 +739,22 @@ app.get('/auth/facebook/start', (_req, res) => {
 
 app.get('/auth/facebook/callback', async (req, res) => {
   try {
-    const code = String(req.query.code || '');
+    const errorMessage = String(req.query.error_message || req.query.error || '');
+    const errorCode = String(req.query.error_code || '');
 
+    if (errorMessage) {
+      return res.status(400).send(
+        `Facebook login error${errorCode ? ` (${errorCode})` : ''}: ${errorMessage}`
+      );
+    }
+
+    const code = String(req.query.code || '');
     if (!code) {
       return res.status(400).send('Missing code');
     }
 
     const shortToken = await exchangeCodeForUserToken(code);
     const longToken = await exchangeLongLivedUserToken(shortToken.access_token);
-
     const me = await getFacebookMe(longToken.access_token);
 
     saveUserToken({
@@ -768,146 +775,12 @@ app.get('/auth/facebook/callback', async (req, res) => {
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>Kết nối Facebook thành công</title>
-          <style>
-            :root {
-              --bg1: #0f172a;
-              --bg2: #111827;
-              --card: rgba(255, 255, 255, 0.08);
-              --border: rgba(255, 255, 255, 0.14);
-              --text: #f8fafc;
-              --muted: #cbd5e1;
-              --ok: #22c55e;
-              --btn: #2563eb;
-              --btn-hover: #1d4ed8;
-            }
-    
-            * {
-              box-sizing: border-box;
-            }
-    
-            body {
-              margin: 0;
-              min-height: 100vh;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 24px;
-              font-family: Arial, Helvetica, sans-serif;
-              color: var(--text);
-              background:
-                radial-gradient(circle at top left, #1d4ed8 0%, transparent 30%),
-                radial-gradient(circle at bottom right, #059669 0%, transparent 25%),
-                linear-gradient(135deg, var(--bg1), var(--bg2));
-            }
-    
-            .card {
-              width: 100%;
-              max-width: 560px;
-              background: var(--card);
-              border: 1px solid var(--border);
-              border-radius: 20px;
-              padding: 32px 28px;
-              backdrop-filter: blur(10px);
-              box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-            }
-    
-            .icon {
-              width: 64px;
-              height: 64px;
-              border-radius: 999px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin: 0 auto 18px;
-              background: rgba(34, 197, 94, 0.16);
-              border: 1px solid rgba(34, 197, 94, 0.35);
-              color: var(--ok);
-              font-size: 32px;
-              font-weight: bold;
-            }
-    
-            h1 {
-              margin: 0 0 12px;
-              text-align: center;
-              font-size: 28px;
-              line-height: 1.2;
-            }
-    
-            p {
-              margin: 0 0 10px;
-              text-align: center;
-              color: var(--muted);
-              font-size: 16px;
-              line-height: 1.6;
-            }
-    
-            .meta {
-              margin-top: 22px;
-              padding: 14px 16px;
-              border-radius: 14px;
-              background: rgba(255, 255, 255, 0.06);
-              border: 1px solid rgba(255, 255, 255, 0.08);
-              color: var(--muted);
-              font-size: 14px;
-              text-align: center;
-            }
-    
-            .actions {
-              margin-top: 24px;
-              display: flex;
-              justify-content: center;
-              gap: 12px;
-              flex-wrap: wrap;
-            }
-    
-            .btn {
-              appearance: none;
-              border: 0;
-              border-radius: 12px;
-              padding: 12px 18px;
-              font-size: 15px;
-              font-weight: 600;
-              cursor: pointer;
-              text-decoration: none;
-              transition: 0.2s ease;
-            }
-    
-            .btn-primary {
-              background: var(--btn);
-              color: white;
-            }
-    
-            .btn-primary:hover {
-              background: var(--btn-hover);
-            }
-    
-            .btn-secondary {
-              background: rgba(255, 255, 255, 0.08);
-              color: var(--text);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-    
-            .btn-secondary:hover {
-              background: rgba(255, 255, 255, 0.12);
-            }
-          </style>
         </head>
-        <body>
-          <div class="card">
-            <div class="icon">✓</div>
-            <h1>Kết nối Facebook thành công</h1>
-            <p>Token đã được lưu an toàn vào <strong>token-store.json</strong>.</p>
-            <p>Bạn có thể đóng tab này và quay lại ứng dụng để tiếp tục chạy full flow.</p>
-    
-            <div class="meta">
-              Hệ thống đã sẵn sàng dùng token đã lưu cho các lần chạy tiếp theo.
-            </div>
-    
-            <div class="actions">
-              <button class="btn btn-primary" onclick="window.close()">Đóng tab</button>
-              <a class="btn btn-secondary" href="/auth/status">Xem trạng thái token</a>
-            </div>
-          </div>
+        <body style="font-family:Arial,sans-serif;padding:40px;text-align:center;">
+          <h1>Kết nối Facebook thành công</h1>
+          <p>Đã lưu token cho tài khoản: <strong>${me.name || 'Không rõ tên'}</strong></p>
+          <p>Facebook ID: <strong>${me.id || 'Không rõ ID'}</strong></p>
+          <p>Bạn có thể đóng tab này và quay lại ứng dụng.</p>
         </body>
       </html>
     `);
@@ -915,6 +788,21 @@ app.get('/auth/facebook/callback', async (req, res) => {
     res.status(400).send(`Auth callback error: ${err.message}`);
   }
 });
+async function getFacebookMe(userToken) {
+  const url =
+    `https://graph.facebook.com/v23.0/me` +
+    `?fields=id,name` +
+    `&access_token=${encodeURIComponent(userToken)}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!res.ok || data.error) {
+    throw new Error(data?.error?.message || 'Không lấy được thông tin tài khoản Facebook');
+  }
+
+  return data;
+}
 
 app.get('/auth/status', (_req, res) => {
   const store = readTokenStore();
